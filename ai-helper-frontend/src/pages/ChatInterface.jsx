@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { Send, Plus, User, Home, Map, GitBranch, FolderOpen, MessageCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Send, Plus, User, Home, Map, GitBranch, FolderOpen, MessageCircle, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ChatInterface = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const projectContext = location.state;
 
   const user = { name: 'John Doe', username: 'johndoe' };
 
-  const [chatHistory, setChatHistory] = useState([
-    { role: 'ai', text: 'Hello! I am ready to assist you with your projects. What can I help you with?' },
-  ]);
+  const [chatHistory, setChatHistory] = useState([]);
   const [input, setInput] = useState('');
   const [selectedChat, setSelectedChat] = useState(0);
   const [activeSection, setActiveSection] = useState('chat');
@@ -23,9 +23,24 @@ const ChatInterface = () => {
 
   const userProjects = [
     { id: 1, title: 'AI Helper App', status: 'active' },
-    { id: 2, title: 'E-commerce Platform', status: 'planning' },
+    { id: 2, title: 'E-commerce Platform', status: 'active' },
     { id: 3, title: 'Mobile App', status: 'completed' },
   ];
+
+  // Initialize chat with project context
+  useEffect(() => {
+    if (projectContext) {
+      const welcomeMessage = {
+        role: 'ai',
+        text: `Hello! I'm here to help you with your "${projectContext.projectTitle}" project. I can see it's ${projectContext.projectDesc}. What would you like to discuss about this project?`
+      };
+      setChatHistory([welcomeMessage]);
+    } else {
+      setChatHistory([
+        { role: 'ai', text: 'Hello! I am ready to assist you with your projects. What can I help you with?' },
+      ]);
+    }
+  }, [projectContext]);
 
   const handleSendMessage = () => {
     if (input.trim() !== '') {
@@ -34,7 +49,15 @@ const ChatInterface = () => {
       setInput('');
 
       setTimeout(() => {
-        const aiResponse = { role: 'ai', text: 'I understand your question. Let me help you with that...' };
+        let aiResponse;
+        if (projectContext) {
+          aiResponse = { 
+            role: 'ai', 
+            text: `I understand your question about "${projectContext.projectTitle}". Let me help you with that...` 
+          };
+        } else {
+          aiResponse = { role: 'ai', text: 'I understand your question. Let me help you with that...' };
+        }
         setChatHistory((prev) => [...prev, aiResponse]);
       }, 1000);
     }
@@ -48,9 +71,11 @@ const ChatInterface = () => {
   };
 
   const handleNewChat = () => {
-    setChatHistory([
-      { role: 'ai', text: 'Hello! I am ready to assist you with your projects. What can I help you with?' },
-    ]);
+    const initialMessage = projectContext 
+      ? { role: 'ai', text: `Hello! I'm here to help you with your "${projectContext.projectTitle}" project. I can see it's ${projectContext.projectDesc}. What would you like to discuss about this project?` }
+      : { role: 'ai', text: 'Hello! I am ready to assist you with your projects. What can I help you with?' };
+    
+    setChatHistory([initialMessage]);
     setInput('');
     setSelectedChat(0);
   };
@@ -60,6 +85,23 @@ const ChatInterface = () => {
     setChatHistory([
       { role: 'ai', text: `Continuing conversation about ${existingTopics.find(t => t.id === topicId)?.title}...` },
     ]);
+  };
+
+  const handleBackToProject = () => {
+    if (projectContext) {
+      navigate(`/project/${projectContext.projectId}`);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'text-green-400 bg-green-400/20 border-green-400/30';
+      case 'in-progress':
+        return 'text-orange-400 bg-orange-400/20 border-orange-400/30';
+      default:
+        return 'text-gray-400 bg-gray-400/20 border-gray-400/30';
+    }
   };
 
   return (
@@ -93,7 +135,19 @@ const ChatInterface = () => {
           >
             <Home size={20} />
           </button>
-          <h1 className="text-xl font-bold text-white">AI Helper - Chat</h1>
+          {projectContext && (
+            <button
+              onClick={handleBackToProject}
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors px-3 py-1 rounded-lg hover:bg-gray-800/50"
+              title="Back to Project"
+            >
+              <ArrowLeft size={16} />
+              Back to Project
+            </button>
+          )}
+          <h1 className="text-xl font-bold text-white">
+            {projectContext ? `Chat: ${projectContext.projectTitle}` : 'AI Helper - Chat'}
+          </h1>
         </div>
         
         <div className="flex space-x-4">
@@ -182,7 +236,12 @@ const ChatInterface = () => {
                 <div className="text-center">
                   <MessageCircle size={64} className="mx-auto text-gray-600 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-400 mb-2">Start a New Conversation</h3>
-                  <p className="text-gray-500">Ask me anything about your projects!</p>
+                  <p className="text-gray-500">
+                    {projectContext 
+                      ? `Ask me anything about your "${projectContext.projectTitle}" project!`
+                      : 'Ask me anything about your projects!'
+                    }
+                  </p>
                 </div>
               </div>
             ) : (
@@ -210,7 +269,10 @@ const ChatInterface = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your message... (Shift+Enter for new line)"
+              placeholder={projectContext 
+                ? `Ask about ${projectContext.projectTitle}... (Shift+Enter for new line)`
+                : "Type your message... (Shift+Enter for new line)"
+              }
               className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-500 pl-2 resize-none max-h-32 focus:ring-0"
               rows="1"
               style={{
@@ -243,33 +305,65 @@ const ChatInterface = () => {
             <span>Project Context</span>
           </h2>
           
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Active Projects</h3>
+          {/* Current Project Context */}
+          {projectContext ? (
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/30 rounded-xl">
+              <h3 className="text-sm font-semibold text-blue-400 uppercase tracking-wide mb-2">Current Project</h3>
               <div className="space-y-2">
-                {userProjects.filter(p => p.status === 'active').map((project) => (
-                  <div key={project.id} className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/60 rounded-xl p-3">
-                    <p className="font-medium text-white text-sm">{project.title}</p>
-                    <p className="text-xs text-green-400 capitalize">{project.status}</p>
-                    <div className="flex space-x-2 mt-2">
-                      <button
-                        onClick={() => navigate(`/roadmap/${project.id}`)}
-                        className="text-xs px-2 py-1 bg-orange-600/20 text-orange-400 rounded hover:bg-orange-600/30 transition-colors"
-                      >
-                        Roadmap
-                      </button>
-                      <button
-                        onClick={() => navigate(`/flowchart/${project.id}`)}
-                        className="text-xs px-2 py-1 bg-purple-600/20 text-purple-400 rounded hover:bg-purple-600/30 transition-colors"
-                      >
-                        Flowchart
-                      </button>
+                <h4 className="font-semibold text-white">{projectContext.projectTitle}</h4>
+                <p className="text-sm text-gray-300">{projectContext.projectDesc}</p>
+                {projectContext.projectData && (
+                  <>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(projectContext.projectData.status)}`}>
+                        {projectContext.projectData.status.replace('-', ' ').toUpperCase()}
+                      </span>
+                      <span className="text-xs text-gray-400">{projectContext.projectData.progress}% complete</span>
                     </div>
-                  </div>
-                ))}
+                    
+                    {projectContext.projectData.tasks && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-400 mb-2">Recent Tasks:</p>
+                        <div className="space-y-1">
+                          {projectContext.projectData.tasks.slice(0, 3).map((task, index) => (
+                            <div key={index} className="flex items-center gap-2 text-xs">
+                              {task.completed ? (
+                                <CheckCircle size={12} className="text-green-400" />
+                              ) : (
+                                <Clock size={12} className="text-orange-400" />
+                              )}
+                              <span className={task.completed ? 'text-gray-400 line-through' : 'text-gray-300'}>
+                                {task.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-6 p-4 bg-gradient-to-r from-gray-600/10 to-slate-600/10 border border-gray-500/30 rounded-xl">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">General Chat</h3>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-300">You're in a general chat session.</p>
+                <p className="text-xs text-gray-400">Navigate to a specific project to get contextual assistance, or ask me anything about development, coding, or project management.</p>
+                <div className="mt-3 pt-3 border-t border-gray-700/50">
+                  <p className="text-xs text-gray-500 mb-2">I can help with:</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-400">• Code reviews and debugging</p>
+                    <p className="text-xs text-gray-400">• Architecture decisions</p>
+                    <p className="text-xs text-gray-400">• Best practices and patterns</p>
+                    <p className="text-xs text-gray-400">• Technology recommendations</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+
         </div>
       </div>
     </div>
