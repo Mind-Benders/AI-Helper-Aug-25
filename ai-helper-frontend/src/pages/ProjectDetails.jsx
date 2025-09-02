@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, CheckCircle, Circle, User, Tag, FileText, Activity } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, Circle, User, Tag, FileText, Activity, MessageCircle } from 'lucide-react';
 
 function ProjectDetails() {
   const { projectId } = useParams();
@@ -104,6 +104,18 @@ function ProjectDetails() {
     navigate('/dashboard');
   };
 
+  const handleNavigateToChat = () => {
+    // Navigate to chat with project context
+    navigate('/chat', { 
+      state: { 
+        projectId: currentProject.id,
+        projectTitle: currentProject.title,
+        projectDesc: currentProject.desc,
+        projectData: currentProject
+      } 
+    });
+  };
+
   if (!currentProject) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-950 to-gray-950 text-white flex items-center justify-center">
@@ -152,13 +164,23 @@ function ProjectDetails() {
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur">
         <div className="px-6 py-4">
-          <button
-            onClick={handleBackToDashboard}
-            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft size={20} />
-            Back to Dashboard
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={handleBackToDashboard}
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={20} />
+              Back to Dashboard
+            </button>
+            
+            <button
+              onClick={handleNavigateToChat}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+            >
+              <MessageCircle size={18} />
+              Open Chat
+            </button>
+          </div>
           
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
